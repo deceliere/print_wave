@@ -3,12 +3,15 @@ from PIL import Image, ImageDraw
 import random
 import ewave
 import sys
+import time
 
 import matplotlib.pyplot as plt
 # from matplotlib.animation import FuncAnimation
 
-soundfile = "HIROSHIMA30_1.wav"
+# soundfile = "HIROSHIMA30_1.wav"
+soundfile = "iceland(dematrix).wav"
 average_q = 10
+offset = 2000 * average_q
 
 # Vérifier le nombre d'arguments
 if len(sys.argv) != 2:
@@ -51,7 +54,7 @@ def average(data, location, q):
     #moyenne de q points
     average = 0
     for x in range(q):
-        average += data[location + x, 0]
+        average += data[location + x + offset, 0]
         # print("data {} = {}".format(x + location, data[location + x, 0]))
         # print("average++ =", average)
     average /= q
@@ -88,6 +91,14 @@ for x in range(dots):
     level = scale(average(data, average_q * x, average_q), -32768, 32767, 0, 844)
     print("level =", level)
     generer_image(850, 6, 6, level)
-    show_image()
-    # job_id = conn.printFile(epson, dot_pict, "Titre du travail", options)
-    # print("Travail d'impression envoyé avec l'ID:", job_id)
+    # show_image()
+    job_id = conn.printFile(epson, dot_pict, "Titre du travail", options)
+    print("Travail d'impression envoyé avec l'ID:", job_id)
+    while True:
+        # Vérifier le statut du travail
+        job_attributes = conn.getJobAttributes(job_id)
+        job_state = job_attributes['job-state']
+        # print("job state=", job_state)
+        time.sleep(0.1)
+        if job_state == 9:
+                break
