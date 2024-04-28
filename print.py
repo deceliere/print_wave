@@ -10,31 +10,46 @@ import matplotlib.pyplot as plt
 
 # soundfile = "HIROSHIMA30_1.wav"
 soundfile = "iceland(dematrix).wav"
-average_q = 10
-offset = 2000 * average_q
+sampleStep = 10
+offset = 2000 * sampleStep
+previous_level = 0
+draw_line = True # if false, draw dots
+printOrNot = False # False if test mode, without printer attached
+lineWidth = 2 # printed line width
+getAverage = False # False means pickup raw sample value each sampleStep
+currentDot = 0
 
 # Vérifier le nombre d'arguments
-if len(sys.argv) != 2:
-    print("Usage: python3 script.py loopQ")
+if len(sys.argv) < 2:
+    print("Usage: python3 script.py loopQ average")
     sys.exit(1)
+elif (len(sys.argv) == 3):
+    if (sys.argv[2] == "average"):
+        getAverage = True
 
 # Récupérer les arguments
 dots = int(sys.argv[1]) #nb de points a imprimer
 
-def generer_image(largeur, hauteur, taille_carre, position):
+def generer_image(largeur, hauteur, taille_carre, position, current_image):
     # Création de l'image avec fond blanc et résolution de 300 PPI
+    global previous_level
     image = Image.new("RGB", (largeur, hauteur), "white")
     image.info['dpi'] = (300, 300)
-
-    # Dessin d'un carré noir à une position aléatoire
-    # x = random.randint(0, largeur - taille_carre)
-    # Dessin d'un carré noir à la position transmise par la fonction
-    x = position
-    y = 0
+    if current_image == 0:
+        previous_level = int(largeur / 2)
+    print("previous level= ", previous_level)
+    current_level = position
+    print("current level= ", current_level)
     draw = ImageDraw.Draw(image)
-    # draw.rectangle([0, 0, largeur, hauteur], fill="black")
-    draw.rectangle([x, y, x + taille_carre, y + taille_carre], fill="black")
+    if draw_line:
+        draw.line([previous_level, hauteur, current_level, 0], fill="black", width=lineWidth)
+    else:
+        # Dessin d'un carré noir à la position transmise par la fonction
+        x = position
+        y = 0
+        draw.rectangle([x, y, x + taille_carre, y + taille_carre], fill="black")
     image.save("image.png", dpi=(300, 300))
+    previous_level = current_level
 
     # return image
 
@@ -85,16 +100,24 @@ options = {
     # 'media': 'continuous'  # Papier continu (nb: ne fonctionne pas)
 }
 data = get_sample(soundfile)
+if getAverage:
+        print("methode= Average\n")
+else:
+        print("methode= Pick sample\n")
 for x in range(dots):
     # level = scale(data[x * 10, 0], -32768, 32767, 0, 844)
-    # print("total average=", average(data, average_q * x, average_q))
-    level = scale(average(data, average_q * x, average_q), -32768, 32767, 0, 844)
+    # print("total average=", average(data, sampleStep * x, sampleStep))
+    if getAverage:
+        level = scale(average(data, sampleStep * x, sampleStep), -32768, 32767, 0, 844)
+    else:
+        level = scale(data[sampleStep * x, 0], -32768, 32767, 0, 844)
     print("level =", level)
-    generer_image(850, 6, 6, level)
-    # show_image()
-    job_id = conn.printFile(epson, dot_pict, "Titre du travail", options)
-    print("Travail d'impression envoyé avec l'ID:", job_id)
-    while True:
+    generer_image(850, 6, 6, level, x)
+    show_image()
+    if printOrNot:
+        job_id = conn.printFile(epson, dot_pict, "Titre du travail", options)
+        print("Travail d'impression envoyé avec l'ID:", job_id)
+    while printOrNot:
         # Vérifier le statut du travail
         job_attributes = conn.getJobAttributes(job_id)
         job_state = job_attributes['job-state']
@@ -102,3 +125,5 @@ for x in range(dots):
         time.sleep(0.1)
         if job_state == 9:
                 break
+    print("Print {}/{}".format(currentDot, dots - 1))
+    currentDot += 1
