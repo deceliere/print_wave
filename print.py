@@ -2,15 +2,31 @@ import cups
 from PIL import Image, ImageDraw
 import random
 import ewave
+import sys
+
+import matplotlib.pyplot as plt
+# from matplotlib.animation import FuncAnimation
 
 soundfile = "HIROSHIMA30_1.wav"
-def generer_image(largeur, hauteur, taille_carre):
+average_q = 10
+
+# Vérifier le nombre d'arguments
+if len(sys.argv) != 2:
+    print("Usage: python3 script.py loopQ")
+    sys.exit(1)
+
+# Récupérer les arguments
+dots = int(sys.argv[1]) #nb de points a imprimer
+
+def generer_image(largeur, hauteur, taille_carre, position):
     # Création de l'image avec fond blanc et résolution de 300 PPI
     image = Image.new("RGB", (largeur, hauteur), "white")
     image.info['dpi'] = (300, 300)
 
     # Dessin d'un carré noir à une position aléatoire
-    x = random.randint(0, largeur - taille_carre)
+    # x = random.randint(0, largeur - taille_carre)
+    # Dessin d'un carré noir à la position transmise par la fonction
+    x = position
     y = 0
     draw = ImageDraw.Draw(image)
     # draw.rectangle([0, 0, largeur, hauteur], fill="black")
@@ -26,9 +42,22 @@ def get_sample(file):
         data = w.read()
         return data
     
+def scale(valeur, valeur_min, valeur_max, echelle_min, echelle_max):
+    # Calcul de la valeur mise à l'échelle
+    valeur_echelle = (valeur - valeur_min) * (echelle_max - echelle_min) / (valeur_max - valeur_min) + echelle_min
+    return int(valeur_echelle)
 
-# generer_image(850, 8, 8)  # Générer une image de 850x8 pixels avec un carré noir de 8x8 pixels
-# Sauvegarde de l'image en PNG
+def average(data, location, q):
+    #moyenne de q points
+    average = 0
+    for x in range(q):
+        average += data[location + x, 0]
+        # print("data {} = {}".format(x + location, data[location + x, 0]))
+        # print("average++ =", average)
+    average /= q
+    return int(average)
+
+
 
 # Connexion à CUPS
 conn = cups.Connection()
@@ -40,15 +69,24 @@ epson = "EPSON_TM_T88V"
 # Imprimer un fichier
 texte = "/Users/r/Desktop/mud/test_print_c/text.txt"  # Remplacez par le chemin de votre fichier
 image = "pixel_850x8px.png"
-random_pics = "image.png"
+dot_pict = "image.png"
 
 options = {
     'fit-to-page': 'letter',  # Ajustement à la page (peut être différent selon la taille de votre papier)
-    # 'media': 'continuous'  # Papier continu
+    # 'media': 'continuous'  # Papier continu (nb: ne fonctionne pas)
 }
 data = get_sample(soundfile)
-for x in range(1000):
-    generer_image(850, 6, 6)
-    job_id = conn.printFile(epson, random_pics, "Titre du travail", options)
-    print("Travail d'impression envoyé avec l'ID:", job_id)
-    print("data =", data[x, 0])
+for x in range(dots):
+    # level = scale(data[x * 10, 0], -32768, 32767, 0, 844)
+    # print("total average=", average(data, average_q * x, average_q))
+    level = scale(average(data, average_q * x, average_q), -32768, 32767, 0, 844)
+    print("level =", level)
+    generer_image(850, 6, 6, level)
+    # Créer l'animation
+    display = Image.open(dot_pict)
+    # Afficher l'image
+    plt.imshow(display)
+    # plt.axis('off')  # Masquer les axes
+    plt.show()
+    # job_id = conn.printFile(epson, dot_pict, "Titre du travail", options)
+    # print("Travail d'impression envoyé avec l'ID:", job_id)
