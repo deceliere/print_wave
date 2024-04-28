@@ -57,18 +57,24 @@ def average(data, location, q):
     average /= q
     return int(average)
 
-
+def show_image():
+     # Afficher l'image
+    display = Image.open(dot_pict)
+    plt.imshow(display)
+    # plt.axis('off')  # Masquer les axes
+    plt.show()
 
 # Connexion à CUPS
 conn = cups.Connection()
 
 # Récupérer l'imprimante par défaut
 printer = conn.getDefault()
+# ici on specifie qu on veut la TM-T88V
 epson = "EPSON_TM_T88V"
 
 # Imprimer un fichier
-texte = "/Users/r/Desktop/mud/test_print_c/text.txt"  # Remplacez par le chemin de votre fichier
-image = "pixel_850x8px.png"
+texte = "/Users/r/Desktop/mud/test_print_c/text.txt" # pour test, avec default font
+# image = "pixel_850x8px.png"
 dot_pict = "image.png"
 
 options = {
@@ -82,11 +88,6 @@ for x in range(dots):
     level = scale(average(data, average_q * x, average_q), -32768, 32767, 0, 844)
     print("level =", level)
     generer_image(850, 6, 6, level)
-    # Créer l'animation
-    display = Image.open(dot_pict)
-    # Afficher l'image
-    plt.imshow(display)
-    # plt.axis('off')  # Masquer les axes
-    plt.show()
+    show_image()
     # job_id = conn.printFile(epson, dot_pict, "Titre du travail", options)
     # print("Travail d'impression envoyé avec l'ID:", job_id)
